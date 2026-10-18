@@ -13,7 +13,7 @@ st.set_page_config(
 # App Title & Description
 st.title("✈️ Wellness Tourism Package Purchase Predictor")
 st.write("""
-This application predicts whether a customer will purchase the newly introduced **Wellness Tourism Package** 
+This application predicts whether a customer will purchase the newly introduced **Wellness Tourism Package**
 based on their profile and interaction data.
 """)
 
@@ -36,10 +36,10 @@ model = load_model(model_path)
 
 if model is not None:
     st.header("Customer Information Form")
-    
+
     # Organize inputs into columns
     col1, col2 = st.columns(2)
-    
+
     with col1:
         st.subheader("Demographics")
         age = st.slider("Age", 18, 100, 35)
@@ -49,7 +49,7 @@ if model is not None:
         designation = st.selectbox("Designation", ["Executive", "Manager", "Senior Manager", "AVP", "VP"])
         monthly_income = st.number_input("Monthly Income ($)", min_value=0, value=25000)
         city_tier = st.selectbox("City Tier", [1, 2, 3], index=0)
-        
+
     with col2:
         st.subheader("Travel & Interactions")
         type_of_contact = st.selectbox("Type of Contact", ["Self Inquiry", "Company Invited"])
@@ -61,7 +61,7 @@ if model is not None:
         number_of_children = st.slider("Number of Children Accompanying (Age < 5)", 0, 3, 0)
         number_of_trips = st.slider("Average Annual Trips", 1, 10, 3)
         property_star = st.selectbox("Preferred Property Star Rating", [3, 4, 5], index=0)
-        
+
     st.subheader("Ownership & Credentials")
     c3, c4 = st.columns(2)
     with c3:
@@ -94,15 +94,33 @@ if model is not None:
         'Designation': [designation],
         'MonthlyIncome': [monthly_income]
     }
-    
+
     input_df = pd.DataFrame(input_data)
 
     # Add a prediction button
     st.markdown("--- ")
     if st.button("🎯 Predict Purchase Likelihood"):
+        # Ensure we match the model's feature names exactly
+        try:
+            # Fetch the features that the model expects
+            if hasattr(model, 'feature_names_in_'):
+                expected_features = list(model.feature_names_in_)
+            else:
+                expected_features = list(model.steps[0][1].feature_names_in_)
+            
+            # If 'Unnamed: 0' is expected by the trained pipeline, add it dynamically as dummy
+            for col in expected_features:
+                if col not in input_df.columns:
+                    input_df[col] = 0
+            
+            # Reorder columns to match expectations
+            input_df = input_df[expected_features]
+        except Exception:
+            pass
+            
         prediction = model.predict(input_df)[0]
         probability = model.predict_proba(input_df)[0][1]
-        
+
         st.subheader("Prediction Results:")
         if prediction == 1:
             st.success(f"🎉 **Highly Likely to Buy!** (Confidence: {probability:.2%})")
