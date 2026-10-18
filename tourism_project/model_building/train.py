@@ -76,8 +76,14 @@ def train_model():
         mlflow.log_params(best_params)
         mlflow.log_metric("test_accuracy", accuracy)
         mlflow.log_metric("test_f1_score", report['weighted avg']['f1-score'])
-        mlflow.sklearn.log_model(best_model, "model")
         
+        # Fix MLflow untrusted types Exception by adding skops_trusted_types
+        mlflow.sklearn.log_model(
+            sk_model=best_model,
+            artifact_path="model",
+            skops_trusted_types=["xgboost.core.Booster", "xgboost.sklearn.XGBClassifier"]
+        )
+
         # Save model locally for Streamlit deployment
         os.makedirs("tourism_project/deployment", exist_ok=True)
         model_path = "tourism_project/deployment/best_model.pkl"
