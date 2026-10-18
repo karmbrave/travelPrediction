@@ -19,9 +19,14 @@ def train_model():
     y_test = pd.read_csv("ytest.csv").values.ravel()
 
     # Identify numeric and categorical columns
-    # Note: Target 'ProdTaken' is already removed
     num_cols = X_train.select_dtypes(include=['int64', 'float64']).columns.tolist()
     cat_cols = X_train.select_dtypes(include=['object']).columns.tolist()
+
+    # If 'Unnamed: 0' snuck in as an index column, drop it from numerical scaling
+    if 'Unnamed: 0' in num_cols:
+        num_cols.remove('Unnamed: 0')
+        X_train = X_train.drop(columns=['Unnamed: 0'])
+        X_test = X_test.drop(columns=['Unnamed: 0'])
 
     print(f"Numerical columns: {num_cols}")
     print(f"Categorical columns: {cat_cols}")
@@ -48,15 +53,16 @@ def train_model():
     }
 
     print("Starting Grid Search...")
-    grid_search = GridSearchCV(pipeline, param_grid, cv=3, scoring='accuracy', n_jobs=-1)
-    
+    # Updated scoring to 'f1' to balance classes better
+    grid_search = GridSearchCV(pipeline, param_grid, cv=3, scoring='f1', n_jobs=-1)
+
     # Start MLflow Run
     mlflow.set_experiment("Tourism_Package_Prediction")
     with mlflow.start_run():
         grid_search.fit(X_train, y_train)
         best_model = grid_search.best_estimator_
         best_params = grid_search.best_params_
-        
+
         # Evaluate on test set
         y_pred = best_model.predict(X_test)
         accuracy = accuracy_score(y_test, y_pred)
@@ -64,6 +70,7 @@ def train_model():
 
         print(f"Best Hyperparameters: {best_params}")
         print(f"Test Accuracy: {accuracy:.4f}")
+        print(f"Test F1 Score (weighted): {report['weighted avg']['f1-score']:.4f}")
 
         # Log to MLflow
         mlflow.log_params(best_params)
